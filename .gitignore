@@ -1,0 +1,5 @@
+# TLS private key
+kong/certs/kong.key
+
+# Local environment/secrets
+.env

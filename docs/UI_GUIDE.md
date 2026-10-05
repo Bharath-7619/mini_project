@@ -1,0 +1,198 @@
+# 🖥️ NMS API Gateway — Web Dashboard User Guide
+
+Welcome to the **User Interface Guide** for **Project 18: Secure API Gateway for NMS Northbound Interfaces**. This guide covers every screen, button, metric, and security test in the application.
+
+---
+
+## 📑 Table of Contents
+1. [Overview & Access](#overview--access)
+2. [🔐 Login Page (OAuth2 Client Authentication)](#-login-page-oauth2-client-authentication)
+3. [🧭 Top Navigation Bar & Global Indicators](#-top-navigation-bar--global-indicators)
+4. [📊 Dashboard View (System Health & Services)](#-dashboard-view-system-health--services)
+5. [🖥️ Nodes View (Network Topology Inventory)](#️-nodes-view-network-topology-inventory)
+6. [🚨 Alarms View (Active Incident Monitor)](#-alarms-view-active-incident-monitor)
+7. [📡 Events View (Live Network Event Feed)](#-events-view-live-network-event-feed)
+8. [🔑 API Token View (Bearer Token & CLI Tools)](#-api-token-view-bearer-token--cli-tools)
+9. [🛡️ Security Status View & Attack Tests](#️-security-status-view--attack-tests)
+10. [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+11. [How to Demo This Project](#how-to-demo-this-project)
+
+---
+
+## Overview & Access
+
+* **URL:** [http://localhost:3000](http://localhost:3000)
+* **Frontend Tech:** React 18, Vite, Tailwind CSS, Lucide Icons, Nginx
+* **Architecture:** The browser communicates with the React SPA, which proxies all API calls through the **Kong API Gateway** (`https://localhost:8443`) before reaching **OpenNMS Horizon** (`http://opennms:8980`).
+
+---
+
+## 🔐 Login Page (OAuth2 Client Authentication)
+
+When you first open [http://localhost:3000](http://localhost:3000) without an active token, you are presented with the secure login portal:
+
+### Screen Elements:
+* **Client ID Input:** Default is `nms-client-id`. Identifies the calling application registered in Kong.
+* **Client Secret Input:** Default is `nms-client-secret`. The confidential secret key for client credentials grant.
+* **Requested Scope Dropdown:**
+  * `nms-read` — Grants read-only access to network data.
+  * `nms-read nms-write` — Grants full read-write privileges.
+* **"Authenticate via Gateway" Button:** Sends a `POST` request to `https://localhost:8443/nms/oauth2/token`. Once Kong validates the credentials and returns a Bearer token, the UI automatically transitions into the authenticated dashboard.
+
+---
+
+## 🧭 Top Navigation Bar & Global Indicators
+
+Always visible at the top of the screen:
+
+| Component | Visual | Description |
+|---|---|---|
+| **Kong Status** | `🟢 Kong: TLS 8443` | Confirms the API Gateway is reachable and encrypting traffic over HTTPS on port 8443. |
+| **Token Expiry Timer** | `⏱️ Token: 59m 45s` | Live countdown starting at 60 minutes (3,600 seconds). Logs you out automatically when expired. |
+| **Rate Limit Budget** | `⚡ RL: 95/100` | Shows current remaining requests out of the 100 requests/minute quota. |
+| **Sync Button** | `⟳ (Refresh Icon)` | Instantly re-queries OpenNMS via Kong to update all tables without reloading the page. |
+| **Sign Out Button** | `[→ Sign Out` | Destroys the active Bearer token and returns you to the login screen. |
+
+---
+
+## 📊 Dashboard View (System Health & Services)
+
+Accessible via **Sidebar ➔ 📊 Dashboard**:
+
+1. **System Version Metric Card:** Displays the running OpenNMS Horizon build (`36.0.4`).
+2. **Monitored Nodes Metric Card:** Total network devices discovered in the network topology.
+3. **Active Alarms Metric Card:** Active alerts requiring attention (green if 0, red if > 0).
+4. **Rate Limit Budget Card:** Visual progress bar tracking real-time API quota consumption.
+5. **Core Services & Daemons Grid:** Displays the live status of all internal OpenNMS background daemons:
+   * `Eventd` — Processes incoming network events.
+   * `Alarmd` — Correlates events into actionable alarms.
+   * `Pollerd` — Polls network interfaces and services.
+   * `Collectd` — Collects SNMP/performance metrics.
+   * `Discovery` — Automatically discovers new network interfaces.
+   * `JettyServer` — Serves the internal REST API.
+   * *Status:* Each service displays a green **"running"** badge.
+
+---
+
+## 🖥️ Nodes View (Network Topology Inventory)
+
+Accessible via **Sidebar ➔ 🖥️ Nodes**:
+
+Lists all monitored infrastructure nodes queried from `GET /nms/rest/nodes`:
+* **Node ID:** Unique numerical identifier (e.g., `#1`).
+* **Node Label:** Human-readable device name (e.g., `localhost`).
+* **Foreign Source:** Provisioning source category (e.g., `selfmonitor`).
+* **Location:** Network zone or geographic location (`Default`).
+* **Created Date:** Exact date and time the node was added to monitoring.
+* **Status Badge:** Shows `Active` with a pulsing green indicator.
+* **Search Filter:** An instant search bar at the top right to filter nodes by label or source.
+
+---
+
+## 🚨 Alarms View (Active Incident Monitor)
+
+Accessible via **Sidebar ➔ 🚨 Alarms**:
+
+Monitors active alarms generated by OpenNMS (`GET /nms/rest/alarms`):
+* **Normal / Clean State:** Displays an **"All Clear! No Active Alarms"** badge with a green checkmark when all monitored network devices are operational.
+* **Incident State:** When devices experience outages or thresholds are breached, alarms appear with:
+  * **Severity Badges:** `CRITICAL` (Red), `MAJOR` (Orange), `MINOR` (Yellow), `WARNING` (Amber).
+  * **Device Label:** Affected device.
+  * **Description:** Plain-English summary of the issue.
+  * **Last Event Timestamp:** Time the alarm was triggered.
+
+---
+
+## 📡 Events View (Live Network Event Feed)
+
+Accessible via **Sidebar ➔ 📡 Events**:
+
+Shows the real-time event log stream (`GET /nms/rest/events`):
+* **Event ID:** Sequential event number.
+* **Severity:** `NORMAL` (Green) or `WARNING` (Amber).
+* **UEI (Universal Event Identifier):** Standardized OpenNMS event signature, e.g.:
+  * `uei.opennms.org/nodes/nodeAdded`
+  * `uei.opennms.org/nodes/nodeGainedService`
+  * `uei.opennms.org/internal/discovery/newSuspect`
+* **Source & IP:** Discovery agent or daemon that detected the event, plus the interface IP (`127.0.0.1`).
+* **Timestamp:** Local time the event occurred.
+* **Search Filter:** Real-time search bar to filter events by keyword or service name.
+
+---
+
+## 🔑 API Token View (Bearer Token & CLI Tools)
+
+Accessible via **Sidebar ➔ 🔑 API Token**:
+
+Designed for developers integrating external scripts or services with the gateway:
+* **Active Access Token Box:** Shows the full OAuth2 access token issued by Kong.
+* **"Copy Token" Button:** Copies the Bearer token directly to the clipboard.
+* **Session Details:**
+  * **Token Type:** `Bearer`
+  * **Time Remaining:** Exact countdown until expiry.
+  * **Granted Scope:** `nms-read` or `nms-write`.
+  * **Client ID:** `nms-client-id`.
+* **cURL Command Snippet:** A copy-paste terminal command to make authenticated calls directly from your CLI:
+  ```bash
+  curl -k https://localhost:8443/nms/rest/info \
+    -H "Authorization: Bearer <YOUR_TOKEN>"
+  ```
+
+---
+
+## 🛡️ Security Status View & Attack Tests
+
+Accessible via **Sidebar ➔ 🛡️ Security Status**:
+
+This screen proves all Project 18 security requirements are enforced:
+
+### Active Security Policies:
+1. **HTTPS / TLS Encryption:** Confirms all external traffic is secured via TLS 1.3 on port 8443.
+2. **OAuth2 Authentication:** Confirms Kong blocks unauthenticated calls before reaching OpenNMS.
+3. **Rate Limiting:** Confirms client traffic is capped at 100 req/min and 1,000 req/hr.
+
+### Interactive Attack Simulation Suite:
+Click the **"Run Test"** buttons to simulate real-world attacks against the live gateway:
+
+#### 1. Unauthenticated Request Attack
+* **Simulation:** An attacker calls `GET /nms/rest/info` without sending an `Authorization` header.
+* **Expected Result:** Kong blocks the request immediately with **`401 Unauthorized`**.
+* **UI Indicator:** Green checkmark: *"Blocked with 401 Unauthorized as expected"*.
+
+#### 2. Invalid / Tampered Token Attack
+* **Simulation:** An attacker calls the API using a fabricated token (`fake_invalid_jwt_token_xyz987`).
+* **Expected Result:** Kong checks its OAuth2 token database, fails validation, and rejects with **`401 Unauthorized`**.
+* **UI Indicator:** Green checkmark: *"Blocked with 401 Unauthorized (Invalid Token)"*.
+
+#### 3. Rate Limit Flood Attack (DoS Simulation)
+* **Simulation:** The browser fires **110 rapid requests** in a tight loop to simulate a Denial-of-Service attempt.
+* **Expected Result:** Requests 1–100 succeed. On request **#101**, Kong throttles the client and returns **`HTTP 429 Too Many Requests`**.
+* **UI Indicator:** Green checkmark: *"Rate Limit triggered on request #101 (HTTP 429 Too Many Requests)"*.
+
+---
+
+## Frequently Asked Questions (FAQ)
+
+### Q: Why does the rate limit show 95/100 right after I log in?
+**A:** When you log in, the dashboard makes 5 initial requests to load the page (`/oauth2/token`, `/rest/info`, `/rest/nodes`, `/rest/alarms`, `/rest/events`). Kong deducts 1 credit per request from your 100-request minute budget ($100 - 5 = 95$). The counter automatically resets back to 100 every 60 seconds.
+
+### Q: Is the rate limit tracked in the browser or on the server?
+**A:** On the **server (Kong Gateway)**. Even if you open multiple browser tabs or use terminal `curl`, Kong tracks the requests globally for your client IP/credentials.
+
+### Q: What happens when the countdown timer hits 0s?
+**A:** The token expires on Kong. The UI will automatically log you out and prompt you to re-authenticate with your client credentials.
+
+---
+
+## How to Demo This Project
+
+Follow this sequence for an impressive demonstration during reviews or presentations:
+1. **Open [http://localhost:3000](http://localhost:3000):** Show the clean, professional Login portal. Explain OAuth2 Client Credentials flow.
+2. **Log In:** Click *Authenticate via Gateway*. Show the smooth transition into the live app.
+3. **Show Dashboard:** Point out OpenNMS version `36.0.4` and the green running status of all core daemons.
+4. **Show Nodes & Events:** Demonstrate that real OpenNMS data is being returned through the gateway.
+5. **Show API Token:** Demonstrate the one-click copy button and live countdown timer.
+6. **Go to Security Status:** Run all three attack tests one-by-one:
+   * Run Test 1 ➔ Show live **401 Unauthorized** defense.
+   * Run Test 2 ➔ Show live **401 Invalid Token** defense.
+   * Run Test 3 ➔ Show live **429 Rate Limit Throttling** defense!
